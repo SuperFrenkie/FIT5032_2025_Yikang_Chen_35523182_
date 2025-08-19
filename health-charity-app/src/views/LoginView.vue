@@ -1,27 +1,58 @@
 <script setup>
 import { ref } from 'vue'
 import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword } from 'firebase/auth'
+import { doc, setDoc } from 'firebase/firestore'
 import { useRouter } from 'vue-router'
+import { db } from '@/firebase'
+import { sendWelcomeEmail } from '@/services/emailService'
 
 const email = ref('')
 const password = ref('')
 const isRegistering = ref(false)
 const errorMessage = ref('')
+const successMessage = ref('')
+const isLoading = ref(false)
 const router = useRouter()
 const auth = getAuth()
 
 const handleAuthAction = async () => {
   errorMessage.value = ''
+  successMessage.value = ''
+  isLoading.value = true
+
   try {
     if (isRegistering.value) {
       // Register user
-      await createUserWithEmailAndPassword(auth, email.value, password.value)
+      const userCredential = await createUserWithEmailAndPassword(auth, email.value, password.value)
+      const user = userCredential.user
+
+      // Create user document in Firestore
+      await setDoc(doc(db, 'users', user.uid), {
+        email: user.email,
+        role: 'user',
+        createdAt: new Date(),
+        displayName: user.email.split('@')[0] // Use email prefix as display name
+      })
+
+      // Send welcome email using EmailJS
+      try {
+        await sendWelcomeEmail(user.email, user.email.split('@')[0])
+        successMessage.value = 'Registration successful! Welcome email sent.'
+      } catch (emailError) {
+        console.warn('Failed to send welcome email:', emailError)
+        successMessage.value = 'Registration successful! (Welcome email could not be sent)'
+      }
+
+      // Redirect after a short delay to show success message
+      setTimeout(() => {
+        router.push('/')
+      }, 2000)
+
     } else {
       // Sign in user
       await signInWithEmailAndPassword(auth, email.value, password.value)
+      router.push('/')
     }
-    // Redirect to home on successful login/registration
-    router.push('/')
   } catch (error) {
     switch (error.code) {
       case 'auth/invalid-email':
@@ -36,10 +67,15 @@ const handleAuthAction = async () => {
       case 'auth/email-already-in-use':
         errorMessage.value = 'An account already exists with that email address.'
         break
+      case 'auth/weak-password':
+        errorMessage.value = 'Password should be at least 6 characters.'
+        break
       default:
         errorMessage.value = 'An unexpected error occurred. Please try again.'
         break
     }
+  } finally {
+    isLoading.value = false
   }
 }
 </script>
@@ -57,8 +93,11 @@ const handleAuthAction = async () => {
           <label for="password">Password</label>
           <input type="password" id="password" v-model="password" placeholder="Enter your password" required>
         </div>
-        <button type="submit">{{ isRegistering ? 'Register' : 'Login' }}</button>
+        <button type="submit" :disabled="isLoading">
+          {{ isLoading ? 'Processing...' : (isRegistering ? 'Register' : 'Login') }}
+        </button>
         <p v-if="errorMessage" class="error-message">{{ errorMessage }}</p>
+        <p v-if="successMessage" class="success-message">{{ successMessage }}</p>
       </form>
       <p class="toggle-form">
         {{ isRegistering ? 'Already have an account?' : "Don't have an account?" }}
@@ -121,9 +160,23 @@ button {
 }
 
 .error-message {
-  color: red;
+  color: #e74c3c;
   text-align: center;
   margin-top: 1rem;
+  font-size: 0.9rem;
+}
+
+.success-message {
+  color: #27ae60;
+  text-align: center;
+  margin-top: 1rem;
+  font-size: 0.9rem;
+}
+
+button:disabled {
+  background-color: #bdc3c7;
+  cursor: not-allowed;
+  opacity: 0.7;
 }
 
 .toggle-form {

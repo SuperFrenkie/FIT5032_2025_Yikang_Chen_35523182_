@@ -1,32 +1,38 @@
 <script setup>
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
+import { collection, query, where, getDocs, addDoc } from 'firebase/firestore'
+import { db } from '@/firebase'
+import { useUserStore } from '@/stores/user'
 import StarRating from '@/components/StarRating.vue'
 
-// Mock data, in a real application, this would come from a backend
+const userStore = useUserStore()
+
+// Services data with dynamic ratings
+// Note: Using Firebase document IDs that match your database
 const services = ref([
   {
-    id: 1,
+    id: '57WCcSzSW3zK74brOlHF', // This should match your Firebase serviceId
     title: 'Health Knowledge Lecture',
     description: 'Regularly invite professional doctors to explain the prevention and health care knowledge of common diseases among the elderly.',
     avgRating: 0.0,
     totalReviews: 0
   },
   {
-    id: 2,
+    id: '2',
     title: 'Interest groups and activities',
     description: 'Organize various interest groups such as calligraphy, gardening, and chess and card games to enrich the spiritual and cultural life of the elderly.',
     avgRating: 0.0,
     totalReviews: 0
   },
   {
-    id: 3,
+    id: '3',
     title: 'Home visit for care',
     description: 'Our volunteers will make regular home visits to provide emotional support and daily assistance to elderly people with mobility issues.',
     avgRating: 0.0,
     totalReviews: 0
   },
   {
-    id: 4,
+    id: '4',
     title: 'Community day care',
     description: 'Provide a safe and comfortable environment to ensure that the elderly receive professional care and companionship during the day.',
     avgRating: 0.0,
@@ -34,12 +40,80 @@ const services = ref([
   }
 ])
 
-const handleRatingSubmitted = (serviceId, rating) => {
-  // Here you would typically send the rating to a backend
-  // For now, we'll just log it
-  console.log(`Service ${serviceId} rated with ${rating} stars.`);
-  // You might want to update the UI to reflect that the user has rated
+// Load ratings from Firebase
+const loadRatings = async () => {
+  try {
+    console.log('Loading ratings for services...')
+    for (const service of services.value) {
+      console.log(`Checking ratings for service: ${service.id} (${service.title})`)
+      const ratingsQuery = query(
+        collection(db, 'ratings'),
+        where('serviceId', '==', service.id)
+      )
+      const querySnapshot = await getDocs(ratingsQuery)
+
+      console.log(`Found ${querySnapshot.size} ratings for service ${service.id}`)
+
+      if (!querySnapshot.empty) {
+        let totalRating = 0
+        let count = 0
+
+        querySnapshot.forEach((doc) => {
+          const data = doc.data()
+          console.log(`Rating data:`, data)
+          totalRating += data.rating
+          count++
+        })
+
+        service.avgRating = totalRating / count
+        service.totalReviews = count
+        console.log(`Service ${service.id} - Average: ${service.avgRating}, Total: ${service.totalReviews}`)
+      } else {
+        console.log(`No ratings found for service ${service.id}`)
+      }
+    }
+  } catch (error) {
+    console.error('Error loading ratings:', error)
+    if (error.code === 'permission-denied') {
+      console.error('Firebase permission denied. Please check Firestore security rules.')
+      alert('Unable to load ratings due to permission settings. Please check Firebase configuration.')
+    }
+  }
 }
+
+const handleRatingSubmitted = async (serviceId, rating) => {
+  if (!userStore.isLoggedIn) {
+    alert('Please login to submit a rating!')
+    return
+  }
+
+  try {
+    // Save rating to Firebase
+    await addDoc(collection(db, 'ratings'), {
+      serviceId: serviceId,
+      userId: userStore.user.uid,
+      rating: rating,
+      createdAt: new Date()
+    })
+
+    // Reload ratings to update the display
+    await loadRatings()
+
+    console.log(`Service ${serviceId} rated with ${rating} stars.`)
+  } catch (error) {
+    console.error('Error submitting rating:', error)
+    if (error.code === 'permission-denied') {
+      alert('Permission denied. Please check if you are logged in and Firebase rules are configured correctly.')
+    } else {
+      alert('Failed to submit rating. Please try again.')
+    }
+  }
+}
+
+// Load ratings when component mounts
+onMounted(() => {
+  loadRatings()
+})
 </script>
 
 <template>

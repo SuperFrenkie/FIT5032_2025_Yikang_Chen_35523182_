@@ -4,6 +4,9 @@ import HomeView from '../views/HomeView.vue'
 import ServicesView from '../views/ServicesView.vue'
 import LoginView from '../views/LoginView.vue'
 import AdminView from '../views/AdminView.vue'
+import LocationsView from '../views/LocationsView.vue'
+import ContactView from '../views/ContactView.vue'
+import FeaturesView from '../views/FeaturesView.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -22,9 +25,24 @@ const router = createRouter({
       component: () => import('../views/AboutView.vue')
     },
     {
+      path: '/features',
+      name: 'features',
+      component: FeaturesView
+    },
+    {
       path: '/services',
       name: 'services',
       component: ServicesView
+    },
+    {
+      path: '/locations',
+      name: 'locations',
+      component: LocationsView
+    },
+    {
+      path: '/contact',
+      name: 'contact',
+      component: ContactView
     },
     {
       path: '/login',

@@ -20,31 +20,44 @@ const handleLogout = async () => {
 
 <template>
   <div id="app-container">
-    <header>
+    <!-- Skip to main content link for accessibility -->
+    <a href="#main-content" class="skip-link">Skip to main content</a>
+
+    <header role="banner">
       <div class="wrapper">
-        <nav>
-          <RouterLink to="/">Home</RouterLink>
-          <RouterLink to="/services">Services</RouterLink>
-          <RouterLink to="/about">About Us</RouterLink>
+        <nav role="navigation" aria-label="Main navigation">
+          <RouterLink to="/" aria-label="Go to home page">Home</RouterLink>
+          <RouterLink to="/services" aria-label="View our services">Services</RouterLink>
+          <RouterLink to="/locations" aria-label="Find our locations">Locations</RouterLink>
+          <RouterLink to="/contact" aria-label="Contact us">Contact</RouterLink>
+          <RouterLink to="/about" aria-label="Learn about us">About Us</RouterLink>
 
           <!-- Only show to admins -->
-          <RouterLink v-if="userStore.isAdmin" to="/admin">Admin Dashboard</RouterLink>
+          <RouterLink v-if="userStore.isAdmin" to="/admin" aria-label="Admin dashboard">Admin Dashboard</RouterLink>
+          <RouterLink v-if="userStore.isAdmin" to="/features" aria-label="View implemented features">Features</RouterLink>
 
           <!-- Show different content based on login status -->
           <template v-if="!userStore.isLoggedIn">
-            <RouterLink to="/login">Login</RouterLink>
+            <RouterLink to="/login" aria-label="Login to your account">Login</RouterLink>
           </template>
           <template v-else>
-            <span class="user-email">{{ userStore.user.email }}</span>
-            <a @click="handleLogout" href="#" class="logout-link">Logout</a>
+            <span class="user-email" :aria-label="`Logged in as ${userStore.user.email}`">{{ userStore.user.email }}</span>
+            <button @click="handleLogout" class="logout-link" aria-label="Logout from your account">Logout</button>
           </template>
         </nav>
       </div>
     </header>
 
-    <main>
+    <main id="main-content" role="main" tabindex="-1">
       <RouterView />
     </main>
+
+    <footer role="contentinfo" class="site-footer">
+      <div class="footer-content">
+        <p>&copy; 2024 Health & Happiness Home. All rights reserved.</p>
+        <p>Committed to providing accessible services for all community members.</p>
+      </div>
+    </footer>
   </div>
 </template>
 
@@ -120,5 +133,35 @@ nav a:first-of-type {
   padding: 0 1rem;
   border-left: 1px solid var(--color-border);
   cursor: pointer;
+  background: none;
+  border-top: none;
+  border-right: none;
+  border-bottom: none;
+  color: inherit;
+  font-size: inherit;
+  text-decoration: none;
+}
+
+.logout-link:hover,
+.logout-link:focus {
+  text-decoration: underline;
+}
+
+.site-footer {
+  background-color: #2c3e50;
+  color: white;
+  padding: 2rem 0;
+  margin-top: 3rem;
+  text-align: center;
+}
+
+.footer-content {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 0 2rem;
+}
+
+.footer-content p {
+  margin-bottom: 0.5rem;
 }
 </style>
