@@ -19,6 +19,9 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./health-charity-app
     steps:
     - name: Checkout
       uses: actions/checkout@v4
@@ -27,17 +30,16 @@ jobs:
       uses: actions/setup-node@v4
       with:
         node-version: '18'
+        cache: 'npm'
+        cache-dependency-path: health-charity-app/package-lock.json
         
-    - name: Clean install dependencies
+    - name: Clean install
       run: |
-        cd health-charity-app
         rm -rf node_modules package-lock.json
         npm install
         
     - name: Build
-      run: |
-        cd health-charity-app
-        npm run build
+      run: npm run build
         
     - name: Setup Pages
       uses: actions/configure-pages@v4
