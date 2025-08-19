@@ -15,5 +15,5 @@ export default defineConfig({
       '@': fileURLToPath(new URL('./src', import.meta.url))
     },
   },
-  base: process.env.NODE_ENV === 'production' ? '/FIT5032_2025_Yikang_Chen_35523182_/health-charity-app/' : '/',
+  base: '/',
 })
